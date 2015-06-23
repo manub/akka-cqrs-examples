@@ -1,18 +1,19 @@
 package net.manub.akc
 
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
 
 import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
-import akka.pattern.ask
 import akka.stream.ActorFlowMaterializer
 import akka.util.Timeout
+import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
-trait Server extends JsonProtocol {
+trait Server extends PlayJsonSupport {
+
+  import Message._
+  import TimedMessage._
 
   implicit val system = ActorSystem("akc")
   implicit val flowMaterializer = ActorFlowMaterializer()
@@ -24,20 +25,22 @@ trait Server extends JsonProtocol {
   Http().bindAndHandle(route, "localhost", 8080)
 
   def route =
-    pathPrefix("post") {
-      (post & entity(as[Post])) { post =>
-        commandActor ! CreatePostCommand(post)
-        complete(StatusCodes.Accepted)
-      }
-    } ~ get {
-      path("lastPost") {
-        onComplete((queryActor ? GetLastPost).mapTo[Post]) { lastPost =>
-          complete(lastPost)
+    pathPrefix("user" / Segment) { user =>
+      path("message") {
+        post {
+          entity(as[Message]) { message =>
+            commandActor ! PostMessage(User(user), message)
+            complete(StatusCodes.Accepted)
+          }
+        }
+      } ~ path("timeline") {
+        get {
+          complete(Seq.empty[TimedMessage])
         }
       }
+
+
     }
-
-
 }
 
 

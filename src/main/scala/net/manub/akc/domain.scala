@@ -1,9 +1,24 @@
 package net.manub.akc
 
-import spray.json.DefaultJsonProtocol
+import java.time.Instant
 
-trait JsonProtocol extends DefaultJsonProtocol {
-  implicit val postFormat = jsonFormat2(Post.apply)
+import play.api.libs.json.Json
+
+case class Message(message: String)
+object Message {
+  implicit val formats = Json.format[Message]
 }
 
-case class Post(user: String, message: String)
+case class User(user: String)
+case class TimedMessage(message: String, timestamp: Instant)
+object TimedMessage {
+  implicit val formats = Json.format[TimedMessage]
+}
+
+// commands
+
+case class PostMessage(user: User, message: Message)
+
+// events
+
+case class MessagePosted(user: User, message: Message, timestamp: Instant)
