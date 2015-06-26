@@ -6,17 +6,17 @@ import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
-import akka.stream.ActorFlowMaterializer
+import akka.pattern.ask
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 
 trait Server extends PlayJsonSupport {
 
   import Message._
-  import TimedMessage._
 
   implicit val system = ActorSystem("akc")
-  implicit val flowMaterializer = ActorFlowMaterializer()
+  implicit val flowMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout = Timeout(2, SECONDS)
 
   val queryActor = system.actorOf(Props[QueryActor])
@@ -35,7 +35,9 @@ trait Server extends PlayJsonSupport {
         }
       } ~ path("timeline") {
         get {
-          complete(Seq.empty[TimedMessage])
+          onSuccess((queryActor ? GetMessages).mapTo[Timeline]) { timeline =>
+            complete(timeline)
+          }
         }
       }
 
